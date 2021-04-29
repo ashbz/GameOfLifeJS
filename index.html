@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta charset="utf-8"/>
+  <title>Conway's Game of Life</title>
+  <script type="application/javascript">
+
+    var canvas;
+    var ctx;
+    var currAnimationFrame;
+
+    var WIDTH = 640;
+    var HEIGHT = 640;
+    var BLOCK_SIZE = 2;
+
+    var imageData;
+
+    var mem = [];
+
+    var playing = true;
+
+
+    function init(){
+		canvas = document.getElementById('canvas');
+
+		canvas.width = WIDTH;
+		canvas.height = HEIGHT;
+
+		ctx = canvas.getContext('2d');
+
+		reset();
+
+
+    }
+
+
+
+
+	function reset(){
+		if (playing){
+			toggle();
+		}
+
+		var userBlockSize = document.getElementById("BLOCK_SIZE").value;
+		if (WIDTH % userBlockSize != 0){
+			alert("Invalid block size, width of " + WIDTH + " has to be divisible by " + userBlockSize);
+			return;
+		}
+
+		BLOCK_SIZE = userBlockSize;
+
+		mem = [];
+		for (var i = 0; i < WIDTH/BLOCK_SIZE; i++) {
+			mem[i] = Array(HEIGHT/BLOCK_SIZE).fill(0);
+		}
+
+        imageData=ctx.createImageData(WIDTH,HEIGHT);
+
+		randomize();	
+
+		draw();
+
+		toggle();
+
+		//drawCustomShape(2,2,"010001111");
+	}
+	
+
+
+	function randomize(){
+		for (var x = 0; x < WIDTH/BLOCK_SIZE; x++) {
+			for (var y = 0; y < HEIGHT/BLOCK_SIZE; y++) {
+				mem[x][y] = (Math.random()>.5) ? 1 : 0;
+			}
+		}
+	}
+
+
+//  Any live cell with two or three live neighbours survives.
+//  Any dead cell with three live neighbours becomes a live cell.
+//  All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+	function applyRules(){
+		var changes = [];
+
+		for (var x = 0; x < WIDTH/BLOCK_SIZE; x++) {
+			for (var y = 0; y < HEIGHT/BLOCK_SIZE; y++) {
+				var currCell = mem[x][y];
+				var new_state = currCell;
+				var neighbors = countNeighbors(x,y);
+
+				
+
+				if (currCell == 1){
+					if (neighbors==2 || neighbors==3){
+						new_state = 1;
+					}else{
+						new_state = 0;
+					}
+
+				}else if (currCell == 0){
+					if (neighbors==3){
+						new_state = 1;
+					}
+				}
+
+
+				if (currCell!=new_state){
+					//mem[x][y] = new_state;
+					changes.push({X:x,Y:y,State:new_state});
+				}
+			}
+		}
+
+		for (var i = 0; i < changes.length; i++) {
+			mem[changes[i].X][changes[i].Y] = changes[i].State;
+
+		}
+		//console.log(changes.length);
+	}
+
+
+	function countNeighbors(x, y){
+		var a11;
+		var a12;
+		var a13;
+
+		var b11;
+		var b12 = mem[x][y];
+		var b13;
+
+		var c11;
+		var c12;
+		var c13;
+
+		if (x<1 || x>=WIDTH/BLOCK_SIZE-1 || y<1 || y>=HEIGHT/BLOCK_SIZE-1){
+			// invalid numbers, what do we do here?
+			return 0;
+		}
+
+		var count = 0;
+
+		// top 3
+		if (mem[x-1][y-1] == 1){
+			count++;
+		}
+
+		if (mem[x][y-1] == 1){
+			count++;
+		}
+
+		if (mem[x+1][y-1] == 1){
+			count++;
+		}
+
+		// middle 3
+		if (mem[x-1][y] == 1){
+			count++;
+		}
+
+		if (mem[x][y] == 1){
+			//count++;
+		}
+
+		if (mem[x+1][y] == 1){
+			count++;
+		}
+
+		// middle 3
+		if (mem[x-1][y+1] == 1){
+			count++;
+		}
+
+		if (mem[x][y+1] == 1){
+			count++;
+		}
+
+		if (mem[x+1][y+1] == 1){
+			count++;
+		}
+
+
+		return count;
+
+	}
+
+
+	// used for debug, to add some shapes
+	function drawCustomShape(x, y, s){
+		if (s.length!=9) return;
+
+		mem[x][y] = parseInt(s[0]);
+		mem[x+1][y] = parseInt(s[1]);
+		mem[x+2][y] = parseInt(s[2]);
+		mem[x][y+1] = parseInt(s[3]);
+		mem[x+1][y+1] = parseInt(s[4]);
+		mem[x+2][y+1] = parseInt(s[5]);
+		mem[x][y+2] = parseInt(s[6]);
+		mem[x+1][y+2] = parseInt(s[7]);
+		mem[x+2][y+2] = parseInt(s[8]);
+	}
+
+
+
+    function draw() {
+
+        applyRules();
+
+        var buf=imageData.data;
+		for (var x = 0; x < WIDTH/BLOCK_SIZE; x++) {
+			for (var y = 0; y < HEIGHT/BLOCK_SIZE; y++) {
+				var br = 0;
+				var bg = 0;
+				var bb = 0;
+				var ba = 255;
+
+				if (mem[x][y] == 1){
+					
+					br = 255;
+					bg = 255;
+					bb = 255;
+
+				}else{
+
+				}
+
+				for (var i=0;i<BLOCK_SIZE;i++){
+					for (var j=0;j<BLOCK_SIZE;j++){
+						var newX = x*BLOCK_SIZE + i;
+						var newY = y*BLOCK_SIZE + j;
+
+						var newBufferIndex = newY * WIDTH + newX;
+						newBufferIndex *= 4;
+
+						buf[newBufferIndex + 0] = br;
+						buf[newBufferIndex + 1] = bg;
+						buf[newBufferIndex + 2] = bb;
+						buf[newBufferIndex + 3] = ba;
+
+					}
+				}
+			}
+		}
+
+		ctx.putImageData(imageData,0,0);
+
+		if (playing)
+			currAnimationFrame = requestAnimationFrame(draw);
+    }
+
+
+    function toggle(){
+    	var btn = document.getElementById("btn_toggle");
+    	if (playing){
+    		cancelAnimationFrame(currAnimationFrame);
+    		currAnimationFrame = undefined;
+    		btn.innerText = "Play";
+    	}else{
+    		currAnimationFrame = requestAnimationFrame(draw);
+    		btn.innerText = "Pause";
+    	}
+
+    	playing = !playing;
+
+    }
+  </script>
+ </head>
+ <body onload="init();">
+   <div><canvas id="canvas"></canvas></div>
+   <div><button id="btn_toggle" onclick="toggle();" style="width:60px">Pause</button></div>
+   <br>
+   <div><button id="btn_reset" onclick="reset();" style="width:60px">Reset</button>
+   <input type="number" min="1" step="1" max="16" id="BLOCK_SIZE" value="2" style="width:60px"></div>
+ </body>
+</html>
